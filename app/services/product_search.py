@@ -1,90 +1,117 @@
-"""Servicio encargado de buscar productos."""
+"""Servicio encargado de coordinar la búsqueda de productos."""
 
-from app.schemas.product import Product
+from app.infrastructure.clients.exceptions import ExternalStoreError
+from app.infrastructure.clients.mercado_libre import MercadoLibreClient
+from app.schemas.product import Product, SearchResponse
 
 
-PRODUCTS: tuple[Product, ...] = (
+FALLBACK_PRODUCTS: tuple[Product, ...] = (
     Product(
-        id="ml-001",
+        id="demo-ml-001",
         nombre="Laptop Lenovo IdeaPad 15",
         precio=15499.99,
+        precio_original=16999.99,
         moneda="MXN",
-        tienda="Mercado Libre",
+        tienda="Mercado Libre · Datos de demostración",
         url="https://www.mercadolibre.com.mx/",
+        imagen_url=None,
+        condicion="new",
+        envio_gratis=True,
         calificacion=4.7,
         numero_resenas=253,
     ),
     Product(
-        id="amazon-001",
+        id="demo-ml-002",
         nombre="Laptop HP 14 pulgadas",
         precio=13299.00,
+        precio_original=None,
         moneda="MXN",
-        tienda="Amazon México",
-        url="https://www.amazon.com.mx/",
+        tienda="Mercado Libre · Datos de demostración",
+        url="https://www.mercadolibre.com.mx/",
+        imagen_url=None,
+        condicion="new",
+        envio_gratis=True,
         calificacion=4.5,
         numero_resenas=187,
     ),
     Product(
-        id="walmart-001",
-        nombre="Laptop Acer Aspire 3",
-        precio=11999.00,
-        moneda="MXN",
-        tienda="Walmart México",
-        url="https://www.walmart.com.mx/",
-        calificacion=4.4,
-        numero_resenas=86,
-    ),
-    Product(
-        id="ml-002",
+        id="demo-ml-003",
         nombre="Audífonos inalámbricos Sony",
         precio=1899.00,
+        precio_original=2199.00,
         moneda="MXN",
-        tienda="Mercado Libre",
+        tienda="Mercado Libre · Datos de demostración",
         url="https://www.mercadolibre.com.mx/",
+        imagen_url=None,
+        condicion="new",
+        envio_gratis=False,
         calificacion=4.8,
         numero_resenas=641,
-    ),
-    Product(
-        id="amazon-002",
-        nombre="Audífonos Bluetooth JBL",
-        precio=1299.00,
-        moneda="MXN",
-        tienda="Amazon México",
-        url="https://www.amazon.com.mx/",
-        calificacion=4.6,
-        numero_resenas=329,
-    ),
-    Product(
-        id="walmart-002",
-        nombre="Cafetera programable Oster",
-        precio=1099.00,
-        moneda="MXN",
-        tienda="Walmart México",
-        url="https://www.walmart.com.mx/",
-        calificacion=4.3,
-        numero_resenas=94,
     ),
 )
 
 
 class ProductSearchService:
-    """Contiene la lógica para buscar productos."""
+    """Coordina búsquedas en tiendas y el respaldo simulado."""
 
-    def search(self, query: str) -> list[Product]:
-        """
-        Busca productos cuyo nombre o tienda contenga el texto indicado.
+    def __init__(
+        self,
+        mercado_libre: MercadoLibreClient,
+    ) -> None:
+        self._mercado_libre = mercado_libre
 
-        La comparación no distingue entre mayúsculas y minúsculas.
-        """
+    async def search(
+        self,
+        query: str,
+        limit: int,
+    ) -> SearchResponse:
+        """Busca productos reales y usa respaldo si ocurre un error."""
 
-        normalized_query = query.strip().casefold()
+        normalized_query = query.strip()
 
-        return [
+        try:
+            products = await self._mercado_libre.search_products(
+                query=normalized_query,
+                limit=limit,
+            )
+
+            return SearchResponse(
+                query=normalized_query,
+                total=len(products),
+                source="mercado_libre",
+                fallback_used=False,
+                products=products,
+            )
+
+        except ExternalStoreError as exc:
+            fallback_products = self._search_fallback(
+                query=normalized_query,
+                limit=limit,
+            )
+
+            return SearchResponse(
+                query=normalized_query,
+                total=len(fallback_products),
+                source="simulated_fallback",
+                fallback_used=True,
+                warning=str(exc),
+                products=fallback_products,
+            )
+
+    @staticmethod
+    def _search_fallback(
+        query: str,
+        limit: int,
+    ) -> list[Product]:
+        """Busca dentro del catálogo de respaldo."""
+
+        normalized_query = query.casefold()
+
+        products = [
             product
-            for product in PRODUCTS
+            for product in FALLBACK_PRODUCTS
             if normalized_query in product.nombre.casefold()
             or normalized_query in product.tienda.casefold()
         ]
 
-
-product_search_service = ProductSearchService()
+        return products[:limit]

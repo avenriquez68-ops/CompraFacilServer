@@ -4,8 +4,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.schemas.product import Product
-from app.services.product_search import product_search_service
+from app.infrastructure.clients.mercado_libre import mercado_libre_client
+from app.schemas.product import SearchResponse
+from app.services.product_search import ProductSearchService
 
 router = APIRouter(
     prefix="/search",
@@ -15,11 +16,11 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=list[Product],
+    response_model=SearchResponse,
     summary="Buscar productos",
     description=(
-        "Busca productos simulados por nombre o por tienda. "
-        "La búsqueda no distingue mayúsculas y minúsculas."
+        "Busca productos en Mercado Libre México. "
+        "Si la tienda no está disponible, utiliza datos de respaldo."
     ),
 )
 async def search_products(
@@ -28,11 +29,26 @@ async def search_products(
         Query(
             min_length=2,
             max_length=100,
-            description="Nombre del producto que se desea buscar.",
+            description="Producto que se desea buscar.",
             examples=["laptop"],
         ),
     ],
-) -> list[Product]:
-    """Devuelve los productos que coinciden con el texto buscado."""
+    limit: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=50,
+            description="Cantidad máxima de productos.",
+        ),
+    ] = 20,
+) -> SearchResponse:
+    """Devuelve productos reales o datos de respaldo."""
 
-    return product_search_service.search(q)
+    service = ProductSearchService(
+        mercado_libre=mercado_libre_client,
+    )
+
+    return await service.search(
+        query=q,
+        limit=limit,
+    )
