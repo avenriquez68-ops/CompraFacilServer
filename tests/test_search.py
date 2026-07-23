@@ -116,3 +116,50 @@ async def test_service_uses_fallback_when_store_fails() -> None:
     assert result.source == "simulated_fallback"
     assert result.total == 2
     assert result.warning is not None
+
+def test_search_rejects_invalid_price_range() -> None:
+    """El endpoint debe rechazar un rango de precios inválido."""
+
+    response = client.get(
+        "/api/v1/search",
+        params={
+            "q": "laptop",
+            "minimum_price": 20000,
+            "maximum_price": 5000,
+        },
+    )
+
+    assert response.status_code == 422
+
+    data = response.json()
+
+    assert data["detail"] == (
+        "minimum_price no puede ser mayor "
+        "que maximum_price."
+    )
+
+def test_search_rejects_negative_minimum_price() -> None:
+    """FastAPI debe rechazar precios mínimos negativos."""
+
+    response = client.get(
+        "/api/v1/search",
+        params={
+            "q": "laptop",
+            "minimum_price": -1,
+        },
+    )
+
+    assert response.status_code == 422
+
+def test_search_rejects_invalid_price_order() -> None:
+    """El endpoint debe rechazar un orden no permitido."""
+
+    response = client.get(
+        "/api/v1/search",
+        params={
+            "q": "laptop",
+            "price_order": "incorrect_order",
+        },
+    )
+
+    assert response.status_code == 422

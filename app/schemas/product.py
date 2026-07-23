@@ -1,7 +1,7 @@
 """Esquemas de datos relacionados con productos."""
 
 from pydantic import BaseModel, Field, HttpUrl
-
+from app.schemas.comparison import ComparisonSummary
 
 class Product(BaseModel):
     """Representa un producto encontrado en una tienda."""
@@ -71,3 +71,4 @@ class SearchResponse(BaseModel):
     fallback_used: bool = False
     warning: str | None = None
     products: list[Product]
+    comparison: ComparisonSummary | None = None

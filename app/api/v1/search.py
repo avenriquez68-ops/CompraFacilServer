@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.infrastructure.clients.mercado_libre import mercado_libre_client
@@ -11,6 +11,9 @@ from app.repositories.search_history import search_history_repository
 from app.schemas.product import SearchResponse
 from app.schemas.search_history import SearchHistoryItem
 from app.services.product_search import ProductSearchService
+
+from app.schemas.comparison import ComparisonFilters, PriceOrder
+from app.services.price_comparison import price_comparison_service
 
 router = APIRouter(
     prefix="/search",
@@ -49,8 +52,50 @@ async def search_products(
             description="Cantidad máxima de productos.",
         ),
     ] = 20,
+
+    minimum_price: Annotated[
+        float | None,
+        Query(
+            ge=0,
+            description="Precio mínimo permitido.",
+        ),
+    ] = None,
+    maximum_price: Annotated[
+        float | None,
+        Query(
+            ge=0,
+            description="Precio máximo permitido.",
+        ),
+    ] = None,
+    free_shipping_only: Annotated[
+        bool,
+        Query(
+            description="Mostrar únicamente productos con envío gratis.",
+        ),
+    ] = False,
+    price_order: Annotated[
+        PriceOrder,
+        Query(
+            description="Orden de los productos.",
+        ),
+    ] = PriceOrder.RELEVANCE,
+
+
 ) -> SearchResponse:
     """Devuelve productos y guarda la búsqueda."""
+
+    if (
+        minimum_price is not None
+        and maximum_price is not None
+        and minimum_price > maximum_price
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "minimum_price no puede ser mayor "
+                "que maximum_price."
+            ),
+        )
 
     service = ProductSearchService(
         mercado_libre=mercado_libre_client,
@@ -60,6 +105,35 @@ async def search_products(
         query=q,
         limit=limit,
     )
+
+    filters = ComparisonFilters(
+        minimum_price=minimum_price,
+        maximum_price=maximum_price,
+        free_shipping_only=free_shipping_only,
+        price_order=price_order,
+    )
+
+    compared_products, comparison_summary = (
+        price_comparison_service.compare(
+            products=result.products,
+            filters=filters,
+            stores_consulted=["Mercado Libre"],
+            stores_succeeded=(
+                ["Mercado Libre"]
+                if not result.fallback_used
+                else []
+            ),
+            stores_failed=(
+                ["Mercado Libre"]
+                if result.fallback_used
+                else []
+            ),
+        )
+    )
+
+    result.products = compared_products
+    result.total = len(compared_products)
+    result.comparison = comparison_summary
 
     search_history_repository.create(
         session=session,
