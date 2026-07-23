@@ -4,6 +4,9 @@ from fastapi import FastAPI
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.infrastructure.database.initializer import initialize_database
+
+initialize_database()
 
 app = FastAPI(
     title=settings.app_name,

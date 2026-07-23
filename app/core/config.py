@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Configuración cargada desde variables de entorno."""
 
     app_name: str = "Compra Fácil Server"
-    app_version: str = "0.3.0"
+    app_version: str = "0.4.0"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     mercado_libre_site_id: str = "MLM"
     mercado_libre_access_token: str = ""
     mercado_libre_timeout_seconds: float = 10.0
+
+    database_url: str = "sqlite:///./compra_facil.db"
 
     model_config = SettingsConfigDict(
         env_file=".env",

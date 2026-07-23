@@ -32,3 +32,9 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+
+# Base de datos local
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
