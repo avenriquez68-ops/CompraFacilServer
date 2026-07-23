@@ -3,13 +3,13 @@
 from app.infrastructure.clients.mercado_libre import (
     MercadoLibreClient,
 )
-from app.providers.demo_store import DemoStoreProvider
-from app.providers.mercado_libre import MercadoLibreProvider
+
 from app.schemas.product import Product, SearchResponse
 from app.schemas.search_metadata import SearchMetadata
 from app.services.multi_provider_search import (
     MultiProviderSearchService,
 )
+from app.providers.registry import build_product_providers
 
 
 FALLBACK_PRODUCTS: tuple[Product, ...] = (
@@ -67,18 +67,14 @@ class ProductSearchService:
     ) -> None:
         """Configura los proveedores disponibles."""
 
-        mercado_libre_provider = MercadoLibreProvider(
-            client=mercado_libre,
+        providers = build_product_providers(
+            mercado_libre=mercado_libre,
         )
-
-        demo_store_provider = DemoStoreProvider()
 
         self._multi_provider_service = MultiProviderSearchService(
-            providers=[
-                mercado_libre_provider,
-                demo_store_provider,
-            ],
+            providers=providers,
         )
+
 
     async def search(
         self,
