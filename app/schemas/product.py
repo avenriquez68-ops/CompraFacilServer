@@ -1,7 +1,9 @@
 """Esquemas de datos relacionados con productos."""
 
 from pydantic import BaseModel, Field, HttpUrl
+
 from app.schemas.comparison import ComparisonSummary
+from app.schemas.search_metadata import SearchMetadata
 
 class Product(BaseModel):
     """Representa un producto encontrado en una tienda."""
@@ -67,8 +69,37 @@ class SearchResponse(BaseModel):
 
     query: str
     total: int
-    source: str
-    fallback_used: bool = False
-    warning: str | None = None
+
+    source: str = Field(
+        description=(
+            "Campo conservado por compatibilidad. "
+            "El origen detallado se encuentra en metadata."
+        ),
+    )
+
+    fallback_used: bool = Field(
+        default=False,
+        description=(
+            "Campo conservado por compatibilidad. "
+            "Indica si se utilizaron datos de respaldo."
+        ),
+    )
+
+    warning: str | None = Field(
+        default=None,
+        description=(
+            "Advertencia resumida conservada por compatibilidad."
+        ),
+    )
+
     products: list[Product]
+
     comparison: ComparisonSummary | None = None
+
+    metadata: SearchMetadata | None = Field(
+        default=None,
+        description=(
+            "Información técnica sobre tiendas consultadas "
+            "y posibles fallos."
+        ),
+    )

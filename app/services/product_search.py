@@ -1,8 +1,14 @@
 """Servicio encargado de coordinar la búsqueda de productos."""
 
-from app.infrastructure.clients.exceptions import ExternalStoreError
-from app.infrastructure.clients.mercado_libre import MercadoLibreClient
+from app.infrastructure.clients.mercado_libre import (
+    MercadoLibreClient,
+)
+from app.providers.mercado_libre import MercadoLibreProvider
 from app.schemas.product import Product, SearchResponse
+from app.schemas.search_metadata import SearchMetadata
+from app.services.multi_provider_search import (
+    MultiProviderSearchService,
+)
 
 
 FALLBACK_PRODUCTS: tuple[Product, ...] = (
@@ -52,51 +58,109 @@ FALLBACK_PRODUCTS: tuple[Product, ...] = (
 
 
 class ProductSearchService:
-    """Coordina búsquedas en tiendas y el respaldo simulado."""
+    """Coordina búsquedas multitienda y el respaldo simulado."""
 
     def __init__(
         self,
         mercado_libre: MercadoLibreClient,
     ) -> None:
-        self._mercado_libre = mercado_libre
+        """Configura los proveedores disponibles."""
+
+        mercado_libre_provider = MercadoLibreProvider(
+            client=mercado_libre,
+        )
+
+        self._multi_provider_service = MultiProviderSearchService(
+            providers=[
+                mercado_libre_provider,
+            ],
+        )
 
     async def search(
         self,
         query: str,
         limit: int,
     ) -> SearchResponse:
-        """Busca productos reales y usa respaldo si ocurre un error."""
+        """Busca productos y usa respaldo si todas las tiendas fallan."""
 
         normalized_query = query.strip()
 
-        try:
-            products = await self._mercado_libre.search_products(
+        multi_provider_result = (
+            await self._multi_provider_service.search(
                 query=normalized_query,
-                limit=limit,
+                limit_per_provider=limit,
+            )
+        )
+
+        warning_text = self._build_warning(
+            multi_provider_result.warnings
+        )
+
+        if multi_provider_result.stores_succeeded:
+            metadata = SearchMetadata(
+                source="multi_provider",
+                fallback_used=False,
+                stores_consulted=(
+                    multi_provider_result.stores_consulted
+                ),
+                stores_succeeded=(
+                    multi_provider_result.stores_succeeded
+                ),
+                stores_failed=(
+                    multi_provider_result.stores_failed
+                ),
+                warnings=multi_provider_result.warnings,
             )
 
             return SearchResponse(
                 query=normalized_query,
-                total=len(products),
+                total=len(multi_provider_result.products),
                 source="mercado_libre",
                 fallback_used=False,
-                products=products,
+                warning=warning_text,
+                products=multi_provider_result.products,
+                metadata=metadata,
             )
 
-        except ExternalStoreError as exc:
-            fallback_products = self._search_fallback(
-                query=normalized_query,
-                limit=limit,
-            )
+        fallback_products = self._search_fallback(
+            query=normalized_query,
+            limit=limit,
+        )
 
-            return SearchResponse(
-                query=normalized_query,
-                total=len(fallback_products),
-                source="simulated_fallback",
-                fallback_used=True,
-                warning=str(exc),
-                products=fallback_products,
-            )
+        metadata = SearchMetadata(
+            source="simulated_fallback",
+            fallback_used=True,
+            stores_consulted=(
+                multi_provider_result.stores_consulted
+            ),
+            stores_succeeded=(
+                multi_provider_result.stores_succeeded
+            ),
+            stores_failed=multi_provider_result.stores_failed,
+            warnings=multi_provider_result.warnings,
+        )
+
+        return SearchResponse(
+            query=normalized_query,
+            total=len(fallback_products),
+            source="simulated_fallback",
+            fallback_used=True,
+            warning=warning_text,
+            products=fallback_products,
+            metadata=metadata,
+        )
+
+  
+    @staticmethod
+    def _build_warning(
+        warnings: list[str],
+    ) -> str | None:
+        """Combina las advertencias generadas por los proveedores."""
+
+        if not warnings:
+            return None
+
+        return " ".join(warnings)
 
     @staticmethod
     def _search_fallback(
