@@ -26,9 +26,9 @@ router = APIRouter(
     response_model=SearchResponse,
     summary="Buscar productos",
     description=(
-        "Busca productos en Mercado Libre México. "
-        "Si la tienda no está disponible, utiliza datos de respaldo."
-    ),
+        "Busca y compara productos en múltiples tiendas. "
+        "Si una tienda falla, continúa con las demás disponibles."
+   ),
 )
 async def search_products(
     q: Annotated[
@@ -114,22 +114,26 @@ async def search_products(
     )
 
     compared_products, comparison_summary = (
-        price_comparison_service.compare(
-            products=result.products,
-            filters=filters,
-            stores_consulted=["Mercado Libre"],
-            stores_succeeded=(
-                ["Mercado Libre"]
-                if not result.fallback_used
-                else []
-            ),
-            stores_failed=(
-                ["Mercado Libre"]
-                if result.fallback_used
-                else []
-            ),
-        )
+    price_comparison_service.compare(
+        products=result.products,
+        filters=filters,
+        stores_consulted=(
+            result.metadata.stores_consulted
+            if result.metadata is not None
+            else []
+        ),
+        stores_succeeded=(
+            result.metadata.stores_succeeded
+            if result.metadata is not None
+            else []
+        ),
+        stores_failed=(
+            result.metadata.stores_failed
+            if result.metadata is not None
+            else []
+        ),
     )
+)
 
     result.products = compared_products
     result.total = len(compared_products)

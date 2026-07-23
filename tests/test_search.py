@@ -87,8 +87,8 @@ async def test_mercado_libre_client_normalizes_products() -> None:
 
 
 @pytest.mark.asyncio
-async def test_service_uses_fallback_when_store_fails() -> None:
-    """El servicio debe usar respaldo ante un error externo."""
+async def test_service_continues_when_one_store_fails() -> None:
+    """El servicio debe continuar si al menos una tienda responde."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -98,7 +98,9 @@ async def test_service_uses_fallback_when_store_fails() -> None:
 
     transport = httpx.MockTransport(handler)
 
-    async with httpx.AsyncClient(transport=transport) as http_client:
+    async with httpx.AsyncClient(
+        transport=transport
+    ) as http_client:
         mercado_libre = MercadoLibreClient(
             http_client=http_client,
         )
@@ -112,10 +114,32 @@ async def test_service_uses_fallback_when_store_fails() -> None:
             limit=10,
         )
 
-    assert result.fallback_used is True
-    assert result.source == "simulated_fallback"
+    assert result.fallback_used is False
+    assert result.source == "multi_provider"
     assert result.total == 2
+    assert len(result.products) == 2
     assert result.warning is not None
+
+    assert result.metadata is not None
+    assert result.metadata.fallback_used is False
+
+    assert result.metadata.stores_consulted == [
+        "Mercado Libre",
+        "Tienda Demo",
+    ]
+
+    assert result.metadata.stores_succeeded == [
+        "Tienda Demo",
+    ]
+
+    assert result.metadata.stores_failed == [
+        "Mercado Libre",
+    ]
+
+    assert (
+        "Mercado Libre rechazó la consulta"
+        in result.warning
+    )
 
 def test_search_rejects_invalid_price_range() -> None:
     """El endpoint debe rechazar un rango de precios inválido."""

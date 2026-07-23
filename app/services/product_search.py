@@ -3,6 +3,7 @@
 from app.infrastructure.clients.mercado_libre import (
     MercadoLibreClient,
 )
+from app.providers.demo_store import DemoStoreProvider
 from app.providers.mercado_libre import MercadoLibreProvider
 from app.schemas.product import Product, SearchResponse
 from app.schemas.search_metadata import SearchMetadata
@@ -70,9 +71,12 @@ class ProductSearchService:
             client=mercado_libre,
         )
 
+        demo_store_provider = DemoStoreProvider()
+
         self._multi_provider_service = MultiProviderSearchService(
             providers=[
                 mercado_libre_provider,
+                demo_store_provider,
             ],
         )
 
@@ -115,7 +119,7 @@ class ProductSearchService:
             return SearchResponse(
                 query=normalized_query,
                 total=len(multi_provider_result.products),
-                source="mercado_libre",
+                source="multi_provider",
                 fallback_used=False,
                 warning=warning_text,
                 products=multi_provider_result.products,
@@ -136,7 +140,9 @@ class ProductSearchService:
             stores_succeeded=(
                 multi_provider_result.stores_succeeded
             ),
-            stores_failed=multi_provider_result.stores_failed,
+            stores_failed=(
+                multi_provider_result.stores_failed
+            ),
             warnings=multi_provider_result.warnings,
         )
 
@@ -150,7 +156,6 @@ class ProductSearchService:
             metadata=metadata,
         )
 
-  
     @staticmethod
     def _build_warning(
         warnings: list[str],

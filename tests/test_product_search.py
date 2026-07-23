@@ -48,22 +48,24 @@ async def test_product_search_uses_multi_provider_flow() -> None:
     )
 
     assert result.query == "laptop"
-    assert result.source == "mercado_libre"
+    assert result.source == "multi_provider"
     assert result.fallback_used is False
     assert result.warning is None
-    assert result.total == 1
+    assert result.total == 3
 
     assert result.metadata is not None
     assert result.metadata.source == "multi_provider"
     assert result.metadata.fallback_used is False
 
     assert result.metadata.stores_consulted == [
-        "Mercado Libre"
-    ]
+    "Mercado Libre",
+    "Tienda Demo",
+]
 
     assert result.metadata.stores_succeeded == [
-        "Mercado Libre"
-    ]
+    "Mercado Libre",
+    "Tienda Demo",
+]
 
     assert result.metadata.stores_failed == []
     assert result.metadata.warnings == []
@@ -77,8 +79,8 @@ async def test_product_search_uses_multi_provider_flow() -> None:
 
 
 @pytest.mark.asyncio
-async def test_product_search_uses_fallback_when_store_fails() -> None:
-    """El servicio debe usar respaldo cuando la tienda falla."""
+async def test_product_search_continues_when_one_store_fails() -> None:
+    """La búsqueda debe continuar cuando solo una tienda falla."""
 
     mercado_libre_client = AsyncMock()
 
@@ -98,27 +100,30 @@ async def test_product_search_uses_fallback_when_store_fails() -> None:
     )
 
     assert result.query == "laptop"
-    assert result.source == "simulated_fallback"
-    assert result.fallback_used is True
+    assert result.source == "multi_provider"
+    assert result.fallback_used is False
+    assert result.warning is not None
+    assert result.total == 2
+    assert len(result.products) == 2
 
     assert result.metadata is not None
-    assert result.metadata.source == "simulated_fallback"
-    assert result.metadata.fallback_used is True
+    assert result.metadata.source == "multi_provider"
+    assert result.metadata.fallback_used is False
 
     assert result.metadata.stores_consulted == [
-        "Mercado Libre"
+        "Mercado Libre",
+        "Tienda Demo",
     ]
 
-    assert result.metadata.stores_succeeded == []
+    assert result.metadata.stores_succeeded == [
+        "Tienda Demo",
+    ]
 
     assert result.metadata.stores_failed == [
-        "Mercado Libre"
+        "Mercado Libre",
     ]
 
     assert result.metadata.warnings
-
-
-    assert result.warning is not None
 
     assert (
         "Mercado Libre no está disponible"
