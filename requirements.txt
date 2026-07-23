@@ -2,5 +2,6 @@ fastapi[standard]==0.136.0
 httpx
 pydantic-settings
 SQLAlchemy>=2.0,<3.0
+alembic
 pytest
 pytest-asyncio

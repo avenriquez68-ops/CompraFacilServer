@@ -1,0 +1,70 @@
+"""Configuración de las migraciones de la base de datos."""
+
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+
+from app.core.config import settings
+from app.infrastructure.database.connection import Base
+from app.models.search_history import SearchHistoryModel
+
+config = context.config
+
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.database_url.replace("%", "%%"),
+)
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+target_metadata = Base.metadata
+
+
+def run_migrations_offline() -> None:
+    """Ejecuta migraciones sin crear una conexión activa."""
+
+    context.configure(
+        url=config.get_main_option("sqlalchemy.url"),
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        render_as_batch=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    """Ejecuta migraciones utilizando una conexión activa."""
+
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            render_as_batch=True,
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+
+__all__ = [
+    "SearchHistoryModel",
+]
