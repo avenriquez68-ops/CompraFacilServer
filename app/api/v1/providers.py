@@ -1,11 +1,9 @@
 """Endpoints relacionados con proveedores de productos."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.infrastructure.clients.mercado_libre import (
-    mercado_libre_client,
-)
-from app.providers.registry import build_product_providers
+from app.api.dependencies import get_provider_registry
+from app.providers.registry import ProviderRegistry
 from app.schemas.provider_status import (
     ProviderListResponse,
     ProviderStatus,
@@ -26,20 +24,40 @@ router = APIRouter(
         "en la búsqueda de productos."
     ),
 )
-def get_enabled_providers() -> ProviderListResponse:
+def get_enabled_providers(
+    registry: ProviderRegistry = Depends(
+        get_provider_registry
+    ),
+) -> ProviderListResponse:
+
     """Devuelve los proveedores habilitados por configuración."""
 
-    providers = build_product_providers(
-        mercado_libre=mercado_libre_client,
+    
+    provider_statuses: list[ProviderStatus] = []
+
+    for provider in registry.providers:
+        info = provider.info
+
+        provider_statuses.append(
+            ProviderStatus(
+                provider_id=info.provider_id,
+                store_name=info.display_name,
+                provider_type=info.provider_type,
+                country_code=info.country_code,
+                supports_free_shipping=(
+                    info.supports_free_shipping
+                ),
+                supports_ratings=info.supports_ratings,
+                is_demo=info.is_demo,
+                enabled=True,
+            )
+        )
+
+    return ProviderListResponse(
+        total=len(provider_statuses),
+        providers=provider_statuses,
     )
 
-    provider_statuses = [
-        ProviderStatus(
-            store_name=provider.store_name,
-            enabled=True,
-        )
-        for provider in providers
-    ]
 
     return ProviderListResponse(
         total=len(provider_statuses),
