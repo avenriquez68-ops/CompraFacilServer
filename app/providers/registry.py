@@ -1,5 +1,6 @@
 """Registro central de proveedores de productos."""
 
+from app.core.config import Settings, settings
 from app.infrastructure.clients.mercado_libre import MercadoLibreClient
 from app.providers.base import ProductProvider
 from app.providers.demo_store import DemoStoreProvider
@@ -8,12 +9,19 @@ from app.providers.mercado_libre import MercadoLibreProvider
 
 def build_product_providers(
     mercado_libre: MercadoLibreClient,
+    app_settings: Settings = settings,
 ) -> list[ProductProvider]:
-    """Construye la lista de proveedores disponibles."""
+    """Construye los proveedores habilitados por configuración."""
 
-    return [
+    providers: list[ProductProvider] = [
         MercadoLibreProvider(
             client=mercado_libre,
         ),
-        DemoStoreProvider(),
     ]
+
+    if app_settings.enable_demo_store:
+        providers.append(
+            DemoStoreProvider()
+        )
+
+    return providers

@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     mercado_libre_access_token: str = ""
     mercado_libre_timeout_seconds: float = 10.0
 
+    enable_demo_store: bool = True
+
     database_url: str = "sqlite:///./compra_facil.db"
 
     model_config = SettingsConfigDict(
