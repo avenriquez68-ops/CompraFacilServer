@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.infrastructure.clients.mercado_libre import mercado_libre_client
+from app.api.dependencies import get_product_search_service
 from app.infrastructure.database.connection import get_database_session
 from app.repositories.search_history import search_history_repository
 from app.schemas.product import SearchResponse
@@ -44,6 +44,9 @@ async def search_products(
         Session,
         Depends(get_database_session),
     ],
+    service: ProductSearchService = Depends(
+        get_product_search_service
+    ),
     limit: Annotated[
         int,
         Query(
@@ -97,10 +100,7 @@ async def search_products(
             ),
         )
 
-    service = ProductSearchService(
-        mercado_libre=mercado_libre_client,
-    )
-
+   
     result = await service.search(
         query=q,
         limit=limit,

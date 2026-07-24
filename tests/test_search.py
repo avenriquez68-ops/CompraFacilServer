@@ -7,6 +7,45 @@ from fastapi.testclient import TestClient
 from app.infrastructure.clients.mercado_libre import MercadoLibreClient
 from app.main import app
 from app.services.product_search import ProductSearchService
+from app.api.dependencies import get_product_search_service
+from app.schemas.product import Product, SearchResponse
+
+class FakeProductSearchService:
+    """Servicio de búsqueda simulado para probar el endpoint."""
+
+    async def search(
+        self,
+        query: str,
+        limit: int,
+    ) -> SearchResponse:
+        """Devuelve una respuesta controlada sin consultar tiendas reales."""
+
+        products = [
+            Product(
+                id="fake-001",
+                nombre="Laptop de prueba",
+                precio=9999,
+                precio_original=None,
+                moneda="MXN",
+                tienda="Tienda Simulada",
+                url="https://example.com/fake-001",
+                imagen_url=None,
+                condicion="new",
+                envio_gratis=True,
+                calificacion=4.8,
+                numero_resenas=25,
+            ),
+        ]
+
+        return SearchResponse(
+            query=query,
+            total=len(products),
+            source="test_provider",
+            fallback_used=False,
+            warning=None,
+            products=products[:limit],
+            metadata=None,
+        )
 
 client = TestClient(app)
 
@@ -187,3 +226,37 @@ def test_search_rejects_invalid_price_order() -> None:
     )
 
     assert response.status_code == 422
+
+def test_search_endpoint_uses_dependency_override() -> None:
+    """El endpoint debe permitir sustituir el servicio de búsqueda."""
+
+    def override_product_search_service() -> FakeProductSearchService:
+        return FakeProductSearchService()
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+                "limit": 10,
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["query"] == "laptop"
+    assert data["total"] == 1
+    assert data["source"] == "test_provider"
+    assert data["fallback_used"] is False
+
+    assert len(data["products"]) == 1
+    assert data["products"][0]["id"] == "fake-001"
+    assert data["products"][0]["tienda"] == "Tienda Simulada"
