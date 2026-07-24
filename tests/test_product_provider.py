@@ -5,6 +5,7 @@ import pytest
 from app.providers.base import ProductProvider
 from app.schemas.product import Product
 from app.schemas.provider import ProviderSearchResult
+from app.schemas.provider_info import ProviderInfo, ProviderType
 
 
 class FakeProductProvider(ProductProvider):
@@ -15,6 +16,20 @@ class FakeProductProvider(ProductProvider):
         """Devuelve el nombre de la tienda simulada."""
 
         return "Tienda simulada"
+
+    @property
+    def info(self) -> ProviderInfo:
+        """Devuelve información descriptiva del proveedor falso."""
+
+        return ProviderInfo(
+            provider_id="fake_product_provider",
+            display_name=self.store_name,
+            provider_type=ProviderType.DEMO,
+            country_code="MX",
+            supports_free_shipping=True,
+            supports_ratings=True,
+            is_demo=True,
+        )
 
     async def search(
         self,

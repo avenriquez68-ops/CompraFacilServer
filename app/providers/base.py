@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 from app.schemas.provider import ProviderSearchResult
+from app.schemas.provider_info import ProviderInfo
 
 
 class ProductProvider(ABC):
@@ -12,6 +13,11 @@ class ProductProvider(ABC):
     @abstractmethod
     def store_name(self) -> str:
         """Devuelve el nombre público de la tienda."""
+
+    @property
+    @abstractmethod
+    def info(self) -> ProviderInfo:
+        """Devuelve la información descriptiva del proveedor."""
 
     @abstractmethod
     async def search(

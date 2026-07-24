@@ -9,6 +9,7 @@ from app.services.multi_provider_search import (
 
 import pytest
 
+from app.schemas.provider_info import ProviderInfo, ProviderType
 
 class SuccessfulProvider(ProductProvider):
     """Proveedor simulado que responde correctamente."""
@@ -28,6 +29,20 @@ class SuccessfulProvider(ProductProvider):
         """Devuelve el nombre del proveedor."""
 
         return self._store_name
+
+    @property
+    def info(self) -> ProviderInfo:
+        """Devuelve información descriptiva del proveedor simulado."""
+
+        return ProviderInfo(
+            provider_id=self.store_name.lower().replace(" ", "_"),
+            display_name=self.store_name,
+            provider_type=ProviderType.DEMO,
+            country_code="MX",
+            supports_free_shipping=True,
+            supports_ratings=True,
+            is_demo=True,
+        )
 
     async def search(
         self,
@@ -60,6 +75,19 @@ class SuccessfulProvider(ProductProvider):
 
 class FailingProvider(ProductProvider):
     """Proveedor simulado que genera un error."""
+    @property
+    def info(self) -> ProviderInfo:
+        """Devuelve información descriptiva del proveedor fallido."""
+
+        return ProviderInfo(
+            provider_id="failing_provider",
+            display_name=self.store_name,
+            provider_type=ProviderType.DEMO,
+            country_code="MX",
+            supports_free_shipping=False,
+            supports_ratings=False,
+            is_demo=True,
+        )
 
     @property
     def store_name(self) -> str:

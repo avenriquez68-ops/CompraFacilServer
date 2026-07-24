@@ -6,6 +6,10 @@ from app.infrastructure.clients.mercado_libre import (
 from app.providers.base import ProductProvider
 from app.schemas.provider import ProviderSearchResult
 
+from app.schemas.provider_info import (
+    ProviderInfo,
+    ProviderType,
+)
 
 class MercadoLibreProvider(ProductProvider):
     """Adapta Mercado Libre al contrato común de proveedores."""
@@ -23,6 +27,20 @@ class MercadoLibreProvider(ProductProvider):
         """Devuelve el nombre público de la tienda."""
 
         return "Mercado Libre"
+
+    @property
+    def info(self) -> ProviderInfo:
+        """Devuelve la información descriptiva del proveedor."""
+
+        return ProviderInfo(
+            provider_id="mercado_libre",
+            display_name="Mercado Libre",
+            provider_type=ProviderType.MARKETPLACE,
+            country_code="MX",
+            supports_free_shipping=True,
+            supports_ratings=True,
+            is_demo=False,
+        )
 
     async def search(
         self,

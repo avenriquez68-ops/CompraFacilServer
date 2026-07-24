@@ -4,6 +4,11 @@ from app.providers.base import ProductProvider
 from app.schemas.product import Product
 from app.schemas.provider import ProviderSearchResult
 
+from app.schemas.provider_info import (
+    ProviderInfo,
+    ProviderType,
+)
+
 
 DEMO_STORE_PRODUCTS: tuple[Product, ...] = (
     Product(
@@ -59,6 +64,20 @@ class DemoStoreProvider(ProductProvider):
         """Devuelve el nombre público de la tienda."""
 
         return "Tienda Demo"
+
+    @property
+    def info(self) -> ProviderInfo:
+        """Devuelve la información descriptiva del proveedor."""
+
+        return ProviderInfo(
+            provider_id="demo_store",
+            display_name="Tienda Demo",
+            provider_type=ProviderType.DEMO,
+            country_code="MX",
+            supports_free_shipping=True,
+            supports_ratings=True,
+            is_demo=True,
+        )
 
     async def search(
         self,
