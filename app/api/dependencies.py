@@ -14,8 +14,10 @@ from app.services.product_search import ProductSearchService
 def get_product_search_service() -> ProductSearchService:
     """Construye el servicio principal de búsqueda de productos."""
 
+    registry = get_provider_registry()
+
     return ProductSearchService(
-        mercado_libre=mercado_libre_client,
+        registry=registry,
     )
 
 def get_provider_registry() -> ProviderRegistry:

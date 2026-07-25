@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.infrastructure.clients.exceptions import ExternalStoreError
+from app.core.config import Settings
+from app.providers.registry import build_provider_registry
 from app.schemas.product import Product
 from app.services.product_search import ProductSearchService
 
@@ -27,6 +29,24 @@ def create_product() -> Product:
         numero_resenas=0,
     )
 
+def create_search_service(
+    mercado_libre_client: AsyncMock,
+) -> ProductSearchService:
+    """Crea el servicio con los proveedores habilitados para pruebas."""
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    return ProductSearchService(
+        registry=registry,
+    )
+
 
 @pytest.mark.asyncio
 async def test_product_search_uses_multi_provider_flow() -> None:
@@ -38,8 +58,8 @@ async def test_product_search_uses_multi_provider_flow() -> None:
         create_product(),
     ]
 
-    service = ProductSearchService(
-        mercado_libre=mercado_libre_client,
+    service = create_search_service(
+        mercado_libre_client=mercado_libre_client,
     )
 
     result = await service.search(
@@ -58,9 +78,9 @@ async def test_product_search_uses_multi_provider_flow() -> None:
     assert result.metadata.fallback_used is False
 
     assert result.metadata.stores_consulted == [
-    "Mercado Libre",
-    "Tienda Demo",
-]
+        "Mercado Libre",
+        "Tienda Demo",
+    ]
 
     assert result.metadata.stores_succeeded == [
     "Mercado Libre",
@@ -90,8 +110,8 @@ async def test_product_search_continues_when_one_store_fails() -> None:
         )
     )
 
-    service = ProductSearchService(
-        mercado_libre=mercado_libre_client,
+    service = create_search_service(
+        mercado_libre_client=mercado_libre_client,
     )
 
     result = await service.search(

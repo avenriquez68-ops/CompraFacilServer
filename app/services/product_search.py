@@ -1,15 +1,12 @@
 """Servicio encargado de coordinar la búsqueda de productos."""
 
-from app.infrastructure.clients.mercado_libre import (
-    MercadoLibreClient,
-)
 
 from app.schemas.product import Product, SearchResponse
 from app.schemas.search_metadata import SearchMetadata
 from app.services.multi_provider_search import (
     MultiProviderSearchService,
 )
-from app.providers.registry import build_product_providers
+from app.providers.registry import ProviderRegistry
 
 
 FALLBACK_PRODUCTS: tuple[Product, ...] = (
@@ -63,18 +60,13 @@ class ProductSearchService:
 
     def __init__(
         self,
-        mercado_libre: MercadoLibreClient,
+        registry: ProviderRegistry,
     ) -> None:
-        """Configura los proveedores disponibles."""
-
-        providers = build_product_providers(
-            mercado_libre=mercado_libre,
-        )
+        """Configura la búsqueda con los proveedores registrados."""
 
         self._multi_provider_service = MultiProviderSearchService(
-            providers=providers,
+            providers=registry.providers,
         )
-
 
     async def search(
         self,

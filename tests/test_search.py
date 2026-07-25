@@ -10,6 +10,9 @@ from app.services.product_search import ProductSearchService
 from app.api.dependencies import get_product_search_service
 from app.schemas.product import Product, SearchResponse
 
+from app.core.config import Settings
+from app.providers.registry import build_provider_registry
+
 class FakeProductSearchService:
     """Servicio de búsqueda simulado para probar el endpoint."""
 
@@ -144,8 +147,17 @@ async def test_service_continues_when_one_store_fails() -> None:
             http_client=http_client,
         )
 
-        service = ProductSearchService(
+        test_settings = Settings(
+            enable_demo_store=True,
+        )
+
+        registry = build_provider_registry(
             mercado_libre=mercado_libre,
+            app_settings=test_settings,
+        )
+
+        service = ProductSearchService(
+            registry=registry,
         )
 
         result = await service.search(
