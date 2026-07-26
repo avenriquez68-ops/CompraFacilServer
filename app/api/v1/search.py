@@ -55,7 +55,20 @@ async def search_products(
             description="Cantidad máxima de productos.",
         ),
     ] = 20,
-
+    providers: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Identificadores de proveedores separados "
+                "por comas. Si se omite, se consultan "
+                "todos los proveedores disponibles."
+            ),
+            examples=[
+                "mercado_libre",
+                "mercado_libre,demo_store",
+            ],
+        ),
+    ] = None,
     minimum_price: Annotated[
         float | None,
         Query(
@@ -100,11 +113,26 @@ async def search_products(
             ),
         )
 
+    provider_ids: list[str] | None = None
+
+    if providers is not None:
+        provider_ids = [
+            provider_id.strip()
+            for provider_id in providers.split(",")
+            if provider_id.strip()
+        ]
    
-    result = await service.search(
-        query=q,
-        limit=limit,
-    )
+    try:
+        result = await service.search(
+            query=q,
+            limit=limit,
+            provider_ids=provider_ids,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
+        ) from error
 
     filters = ComparisonFilters(
         minimum_price=minimum_price,
@@ -114,26 +142,26 @@ async def search_products(
     )
 
     compared_products, comparison_summary = (
-    price_comparison_service.compare(
-        products=result.products,
-        filters=filters,
-        stores_consulted=(
-            result.metadata.stores_consulted
-            if result.metadata is not None
-            else []
-        ),
-        stores_succeeded=(
-            result.metadata.stores_succeeded
-            if result.metadata is not None
-            else []
-        ),
-        stores_failed=(
-            result.metadata.stores_failed
-            if result.metadata is not None
-            else []
-        ),
+        price_comparison_service.compare(
+            products=result.products,
+            filters=filters,
+            stores_consulted=(
+                result.metadata.stores_consulted
+                if result.metadata is not None
+                else []
+            ),
+            stores_succeeded=(
+                result.metadata.stores_succeeded
+                if result.metadata is not None
+                else []
+            ),
+            stores_failed=(
+                result.metadata.stores_failed
+                if result.metadata is not None
+                else []
+            ),
+        )
     )
-)
 
     result.products = compared_products
     result.total = len(compared_products)

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Configuración cargada desde variables de entorno."""
 
     app_name: str = "Compra Fácil Server"
-    app_version: str = "0.6.0"
+    app_version: str = "0.9.0"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
 
@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     mercado_libre_site_id: str = "MLM"
     mercado_libre_access_token: str = ""
     mercado_libre_timeout_seconds: float = 10.0
+    mercado_libre_affiliate_id: str = ""
+
+    amazon_associate_tag: str = ""
+
+    walmart_affiliate_id: str = ""
 
     enable_demo_store: bool = True
 

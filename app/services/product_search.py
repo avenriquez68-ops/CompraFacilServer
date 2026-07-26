@@ -62,23 +62,45 @@ class ProductSearchService:
         self,
         registry: ProviderRegistry,
     ) -> None:
-        """Configura la búsqueda con los proveedores registrados."""
+        """Configura la búsqueda con el registro de proveedores."""
 
-        self._multi_provider_service = MultiProviderSearchService(
-            providers=registry.providers,
-        )
+        self._registry = registry
 
     async def search(
         self,
         query: str,
         limit: int,
+        provider_ids: list[str] | None = None,
     ) -> SearchResponse:
         """Busca productos y usa respaldo si todas las tiendas fallan."""
 
         normalized_query = query.strip()
 
+        requested_provider_ids = provider_ids
+
+        if requested_provider_ids is not None:
+            unknown_ids = self._registry.get_unknown_ids(
+                provider_ids=requested_provider_ids,
+            )
+
+            if unknown_ids:
+                unknown_text = ", ".join(unknown_ids)
+
+                raise ValueError(
+                    "Proveedores desconocidos: "
+                    f"{unknown_text}."
+                )
+
+        selected_providers = self._registry.select(
+            provider_ids=requested_provider_ids,
+        )
+
+        multi_provider_service = MultiProviderSearchService(
+            providers=selected_providers,
+        )
+
         multi_provider_result = (
-            await self._multi_provider_service.search(
+            await multi_provider_service.search(
                 query=normalized_query,
                 limit_per_provider=limit,
             )

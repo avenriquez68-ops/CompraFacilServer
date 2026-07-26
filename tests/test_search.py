@@ -16,12 +16,17 @@ from app.providers.registry import build_provider_registry
 class FakeProductSearchService:
     """Servicio de búsqueda simulado para probar el endpoint."""
 
+    received_provider_ids: list[str] | None = None
+
     async def search(
         self,
         query: str,
         limit: int,
+        provider_ids: list[str] | None = None,
     ) -> SearchResponse:
         """Devuelve una respuesta controlada sin consultar tiendas reales."""
+
+        self.received_provider_ids = provider_ids
 
         products = [
             Product(
@@ -272,3 +277,169 @@ def test_search_endpoint_uses_dependency_override() -> None:
     assert len(data["products"]) == 1
     assert data["products"][0]["id"] == "fake-001"
     assert data["products"][0]["tienda"] == "Tienda Simulada"
+
+def test_search_endpoint_parses_single_provider() -> None:
+    """El endpoint debe aceptar un solo proveedor."""
+
+    fake_service = FakeProductSearchService()
+
+    def override_product_search_service() -> FakeProductSearchService:
+        return fake_service
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+                "providers": "demo_store",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert fake_service.received_provider_ids == [
+        "demo_store",
+    ]
+
+
+def test_search_endpoint_parses_multiple_providers() -> None:
+    """El endpoint debe separar varios proveedores por comas."""
+
+    fake_service = FakeProductSearchService()
+
+    def override_product_search_service() -> FakeProductSearchService:
+        return fake_service
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+                "providers": (
+                    "mercado_libre,demo_store"
+                ),
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    assert fake_service.received_provider_ids == [
+        "mercado_libre",
+        "demo_store",
+    ]
+
+
+def test_search_endpoint_normalizes_provider_values() -> None:
+    """El endpoint debe limpiar espacios y valores vacíos."""
+
+    fake_service = FakeProductSearchService()
+
+    def override_product_search_service() -> FakeProductSearchService:
+        return fake_service
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+                "providers": (
+                    " mercado_libre, ,demo_store,"
+                    "mercado_libre "
+                ),
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    assert fake_service.received_provider_ids == [
+        "mercado_libre",
+        "demo_store",
+        "mercado_libre",
+    ]
+
+
+def test_search_endpoint_uses_all_providers_without_filter() -> None:
+    """El endpoint debe usar todos los proveedores sin parámetro."""
+
+    fake_service = FakeProductSearchService()
+
+    def override_product_search_service() -> FakeProductSearchService:
+        return fake_service
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert fake_service.received_provider_ids is None
+
+def test_search_endpoint_rejects_unknown_provider() -> None:
+    """El endpoint debe convertir proveedores desconocidos en HTTP 422."""
+
+    mercado_libre = MercadoLibreClient()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre,
+        app_settings=test_settings,
+    )
+
+    service = ProductSearchService(
+        registry=registry,
+    )
+
+    def override_product_search_service() -> ProductSearchService:
+        return service
+
+    app.dependency_overrides[
+        get_product_search_service
+    ] = override_product_search_service
+
+    try:
+        response = client.get(
+            "/api/v1/search",
+            params={
+                "q": "laptop",
+                "providers": "amazon",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+
+    data = response.json()
+
+    assert data["detail"] == (
+        "Proveedores desconocidos: amazon."
+    )

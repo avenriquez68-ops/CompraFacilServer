@@ -149,3 +149,142 @@ def test_provider_registry_returns_copy_of_provider_list() -> None:
 
     assert providers == []
     assert registry.count() == 1
+
+def test_provider_registry_selects_all_when_ids_are_none() -> None:
+    """El registro debe devolver todos los proveedores sin filtro."""
+
+    mercado_libre_client = AsyncMock()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    providers = registry.select(
+        provider_ids=None,
+    )
+
+    assert len(providers) == 2
+    assert providers[0].info.provider_id == "mercado_libre"
+    assert providers[1].info.provider_id == "demo_store"
+
+
+def test_provider_registry_selects_requested_providers() -> None:
+    """El registro debe devolver únicamente los proveedores solicitados."""
+
+    mercado_libre_client = AsyncMock()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    providers = registry.select(
+        provider_ids=[
+            "demo_store",
+        ],
+    )
+
+    assert len(providers) == 1
+    assert providers[0].info.provider_id == "demo_store"
+
+
+def test_provider_registry_preserves_requested_order() -> None:
+    """El registro debe respetar el orden solicitado."""
+
+    mercado_libre_client = AsyncMock()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    providers = registry.select(
+        provider_ids=[
+            "demo_store",
+            "mercado_libre",
+        ],
+    )
+
+    provider_ids = [
+        provider.info.provider_id
+        for provider in providers
+    ]
+
+    assert provider_ids == [
+        "demo_store",
+        "mercado_libre",
+    ]
+
+
+def test_provider_registry_ignores_duplicate_provider_ids() -> None:
+    """El registro no debe devolver proveedores duplicados."""
+
+    mercado_libre_client = AsyncMock()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    providers = registry.select(
+        provider_ids=[
+            "mercado_libre",
+            "mercado_libre",
+            "demo_store",
+        ],
+    )
+
+    provider_ids = [
+        provider.info.provider_id
+        for provider in providers
+    ]
+
+    assert provider_ids == [
+        "mercado_libre",
+        "demo_store",
+    ]
+
+
+def test_provider_registry_reports_unknown_provider_ids() -> None:
+    """El registro debe identificar proveedores inexistentes."""
+
+    mercado_libre_client = AsyncMock()
+
+    test_settings = Settings(
+        enable_demo_store=True,
+    )
+
+    registry = build_provider_registry(
+        mercado_libre=mercado_libre_client,
+        app_settings=test_settings,
+    )
+
+    unknown_ids = registry.get_unknown_ids(
+        provider_ids=[
+            "mercado_libre",
+            "amazon",
+            "walmart",
+        ],
+    )
+
+    assert unknown_ids == [
+        "amazon",
+        "walmart",
+    ]

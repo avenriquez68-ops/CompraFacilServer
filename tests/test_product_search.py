@@ -29,6 +29,7 @@ def create_product() -> Product:
         numero_resenas=0,
     )
 
+
 def create_search_service(
     mercado_libre_client: AsyncMock,
 ) -> ProductSearchService:
@@ -83,9 +84,9 @@ async def test_product_search_uses_multi_provider_flow() -> None:
     ]
 
     assert result.metadata.stores_succeeded == [
-    "Mercado Libre",
-    "Tienda Demo",
-]
+        "Mercado Libre",
+        "Tienda Demo",
+    ]
 
     assert result.metadata.stores_failed == []
     assert result.metadata.warnings == []
@@ -152,3 +153,110 @@ async def test_product_search_continues_when_one_store_fails() -> None:
 
     assert result.total == 2
     assert len(result.products) == 2
+
+@pytest.mark.asyncio
+async def test_product_search_selects_only_requested_provider() -> None:
+    """La búsqueda debe consultar únicamente el proveedor solicitado."""
+
+    mercado_libre_client = AsyncMock()
+
+    mercado_libre_client.search_products.return_value = [
+        create_product(),
+    ]
+
+    service = create_search_service(
+        mercado_libre_client=mercado_libre_client,
+    )
+
+    result = await service.search(
+        query="laptop",
+        limit=10,
+        provider_ids=[
+            "demo_store",
+        ],
+    )
+
+    assert result.source == "multi_provider"
+    assert result.fallback_used is False
+    assert result.total == 2
+
+    assert result.metadata is not None
+
+    assert result.metadata.stores_consulted == [
+        "Tienda Demo",
+    ]
+
+    assert result.metadata.stores_succeeded == [
+        "Tienda Demo",
+    ]
+
+    assert result.metadata.stores_failed == []
+
+    mercado_libre_client.search_products.assert_not_awaited()
+
+@pytest.mark.asyncio
+async def test_product_search_selects_mercado_libre_only() -> None:
+    """La búsqueda debe poder consultar únicamente Mercado Libre."""
+
+    mercado_libre_client = AsyncMock()
+
+    mercado_libre_client.search_products.return_value = [
+        create_product(),
+    ]
+
+    service = create_search_service(
+        mercado_libre_client=mercado_libre_client,
+    )
+
+    result = await service.search(
+        query="laptop",
+        limit=10,
+        provider_ids=[
+            "mercado_libre",
+        ],
+    )
+
+    assert result.source == "multi_provider"
+    assert result.fallback_used is False
+    assert result.total == 1
+
+    assert result.metadata is not None
+
+    assert result.metadata.stores_consulted == [
+        "Mercado Libre",
+    ]
+
+    assert result.metadata.stores_succeeded == [
+        "Mercado Libre",
+    ]
+
+    assert result.metadata.stores_failed == []
+
+    mercado_libre_client.search_products.assert_awaited_once_with(
+        query="laptop",
+        limit=10,
+    )
+
+@pytest.mark.asyncio
+async def test_product_search_rejects_unknown_provider_ids() -> None:
+    """La búsqueda debe rechazar identificadores desconocidos."""
+
+    mercado_libre_client = AsyncMock()
+
+    service = create_search_service(
+        mercado_libre_client=mercado_libre_client,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="amazon",
+    ):
+        await service.search(
+            query="laptop",
+            limit=10,
+            provider_ids=[
+                "amazon",
+            ],
+        )
+
+    mercado_libre_client.search_products.assert_not_awaited()

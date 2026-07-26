@@ -49,6 +49,61 @@ class ProviderRegistry:
 
         return None
 
+    def select(
+        self,
+        provider_ids: list[str] | None,
+    ) -> list[ProductProvider]:
+        """Selecciona proveedores por identificador."""
+
+        if provider_ids is None:
+            return self.providers
+
+        selected_providers: list[ProductProvider] = []
+        selected_ids: set[str] = set()
+
+        for provider_id in provider_ids:
+            normalized_id = provider_id.strip()
+
+            if not normalized_id:
+                continue
+
+            if normalized_id in selected_ids:
+                continue
+
+            provider = self.get(normalized_id)
+
+            if provider is None:
+                continue
+
+            selected_providers.append(provider)
+            selected_ids.add(normalized_id)
+
+        return selected_providers
+
+    def get_unknown_ids(
+        self,
+        provider_ids: list[str],
+    ) -> list[str]:
+        """Devuelve los identificadores que no existen en el registro."""
+
+        unknown_ids: list[str] = []
+        processed_ids: set[str] = set()
+
+        for provider_id in provider_ids:
+            normalized_id = provider_id.strip()
+
+            if not normalized_id:
+                continue
+
+            if normalized_id in processed_ids:
+                continue
+
+            processed_ids.add(normalized_id)
+
+            if not self.exists(normalized_id):
+                unknown_ids.append(normalized_id)
+
+        return unknown_ids
 
 def build_product_providers(
     mercado_libre: MercadoLibreClient,
