@@ -81,3 +81,69 @@ def test_repository_lists_newest_click_first() -> None:
 
     session.close()
     engine.dispose()
+
+def test_repository_counts_total_clicks() -> None:
+    """Debe devolver el número total de clics."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+
+    total = repository.count_total(session=session)
+
+    assert total == 2
+
+    session.close()
+    engine.dispose()
+
+def test_repository_counts_clicks_by_provider() -> None:
+    """Debe agrupar el número de clics por proveedor."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+
+    totals = repository.count_by_provider(
+        session=session,
+    )
+
+    assert totals == {
+        "amazon": 1,
+        "mercado_libre": 2,
+    }
+
+    session.close()
+    engine.dispose()

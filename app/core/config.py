@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Configuración cargada desde variables de entorno."""
 
     app_name: str = "Compra Fácil Server"
-    app_version: str = "1.0.0"
+    app_version: str = "1.1.0"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
 

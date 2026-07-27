@@ -1,6 +1,6 @@
 """Operaciones de base de datos para clics de afiliados."""
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.affiliate_click import AffiliateClickModel
@@ -48,5 +48,40 @@ class AffiliateClickRepository:
 
         return list(session.scalars(statement).all())
 
+    def count_total(
+        self,
+        session: Session,
+    ) -> int:
+        """Devuelve el número total de clics registrados."""
+
+        statement = select(
+            func.count(AffiliateClickModel.id)
+        )
+
+        total = session.scalar(statement)
+
+        return int(total or 0)
+
+    def count_by_provider(
+        self,
+        session: Session,
+    ) -> dict[str, int]:
+        """Devuelve el número de clics agrupado por proveedor."""
+
+        statement = (
+            select(
+                AffiliateClickModel.provider_id,
+                func.count(AffiliateClickModel.id),
+            )
+            .group_by(AffiliateClickModel.provider_id)
+            .order_by(AffiliateClickModel.provider_id)
+        )
+
+        rows = session.execute(statement).all()
+
+        return {
+            provider_id: int(total)
+            for provider_id, total in rows
+        }
 
 affiliate_click_repository = AffiliateClickRepository()
