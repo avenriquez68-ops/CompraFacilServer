@@ -5,9 +5,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import get_affiliate_link_service
+from app.api.dependencies import (
+    get_affiliate_click_repository,
+    get_affiliate_link_service,
+)
+from app.infrastructure.database.connection import get_database_session
+from app.repositories.affiliate_click import AffiliateClickRepository
 from app.services.affiliate_link import AffiliateLinkService
 
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix="/redirect",
@@ -46,6 +52,14 @@ def redirect_to_product(
         AffiliateLinkService,
         Depends(get_affiliate_link_service),
     ],
+    session: Annotated[
+        Session,
+        Depends(get_database_session),
+    ],
+    click_repository: Annotated[
+        AffiliateClickRepository,
+        Depends(get_affiliate_click_repository),
+    ],
 ) -> RedirectResponse:
     """Genera el destino comercial y devuelve una redirección HTTP."""
 
@@ -59,6 +73,12 @@ def redirect_to_product(
             status_code=422,
             detail=str(error),
         ) from error
+    click_repository.create(
+        session=session,
+        provider_id=provider_id,
+        product_url=product_url,
+        destination_url=destination_url,
+    )
 
     return RedirectResponse(
         url=destination_url,

@@ -14,6 +14,10 @@ from app.providers.registry import (
 from app.services.affiliate_link import AffiliateLinkService
 from app.services.product_search import ProductSearchService
 
+from app.repositories.affiliate_click import (
+    AffiliateClickRepository,
+    affiliate_click_repository,
+)
 
 def get_product_search_service() -> ProductSearchService:
     """Construye el servicio principal de búsqueda de productos."""
@@ -48,3 +52,8 @@ def get_affiliate_link_service() -> AffiliateLinkService:
     return AffiliateLinkService(
         registry=registry,
     )
+
+def get_affiliate_click_repository() -> AffiliateClickRepository:
+    """Proporciona el repositorio de clics de afiliados."""
+
+    return affiliate_click_repository

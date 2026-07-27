@@ -2,10 +2,12 @@
 
 from app.affiliates.registry import AffiliateLinkBuilderRegistry
 from app.api.dependencies import (
+    get_affiliate_click_repository,
     get_affiliate_link_builder_registry,
     get_affiliate_link_service,
 )
 from app.services.affiliate_link import AffiliateLinkService
+from app.repositories.affiliate_click import AffiliateClickRepository
 
 
 def test_get_affiliate_link_builder_registry() -> None:
@@ -56,3 +58,13 @@ def test_affiliate_registry_dependency_returns_new_instance() -> None:
     second_registry = get_affiliate_link_builder_registry()
 
     assert first_registry is not second_registry
+
+def test_get_affiliate_click_repository() -> None:
+    """Debe proporcionar el repositorio de clics."""
+
+    repository = get_affiliate_click_repository()
+
+    assert isinstance(
+        repository,
+        AffiliateClickRepository,
+    )

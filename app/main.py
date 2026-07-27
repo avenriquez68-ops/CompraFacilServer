@@ -5,10 +5,25 @@ from fastapi import FastAPI
 from app.api.v1.router import api_router
 from app.core.config import settings
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from app.infrastructure.database.initializer import (
+    initialize_database,
+)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Inicializa los recursos utilizados por la aplicación."""
+
+    initialize_database()
+
+    yield
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
+    lifespan=lifespan,
     description=(
         "API para buscar y comparar productos de diferentes tiendas en línea."
     ),
