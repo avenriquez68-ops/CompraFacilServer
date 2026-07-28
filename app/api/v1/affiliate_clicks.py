@@ -9,6 +9,7 @@ from app.api.dependencies import get_affiliate_click_repository
 from app.infrastructure.database.connection import get_database_session
 from app.repositories.affiliate_click import AffiliateClickRepository
 from app.schemas.affiliate_click import AffiliateClickStatsResponse
+from app.api.security import require_admin_api_key
 
 
 router = APIRouter(
@@ -21,6 +22,9 @@ router = APIRouter(
     "/stats",
     response_model=AffiliateClickStatsResponse,
     summary="Consultar estadísticas de clics",
+    dependencies=[
+        Depends(require_admin_api_key),
+    ],
 )
 def get_affiliate_click_stats(
     session: Annotated[

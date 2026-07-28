@@ -9,9 +9,10 @@ class Settings(BaseSettings):
     """Configuración cargada desde variables de entorno."""
 
     app_name: str = "Compra Fácil Server"
-    app_version: str = "1.2.0"
+    app_version: str = "1.3.0"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
+    admin_api_key: str = ""
 
     mercado_libre_base_url: str = "https://api.mercadolibre.com"
     mercado_libre_site_id: str = "MLM"

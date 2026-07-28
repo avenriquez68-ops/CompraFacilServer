@@ -7,10 +7,26 @@ from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_affiliate_click_repository
 from app.main import app
+import pytest
+from app.api.security import require_admin_api_key
 
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def allow_admin_access():
+    """Autoriza las pruebas que no evalúan seguridad."""
+
+    app.dependency_overrides[
+        require_admin_api_key
+    ] = lambda: None
+
+    yield
+
+    app.dependency_overrides.pop(
+        require_admin_api_key,
+        None,
+    )
 
 class FakeAffiliateClickStatsRepository:
     """Repositorio simulado para las estadísticas."""
