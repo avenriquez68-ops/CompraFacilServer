@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database.connection import Base
 from app.models.affiliate_click import AffiliateClickModel
 from app.repositories.affiliate_click import AffiliateClickRepository
+from datetime import datetime, timezone
 
 
 def create_test_session() -> tuple[Session, object]:
@@ -143,6 +144,295 @@ def test_repository_counts_clicks_by_provider() -> None:
     assert totals == {
         "amazon": 1,
         "mercado_libre": 2,
+    }
+
+    session.close()
+    engine.dispose()
+
+def test_repository_counts_clicks_for_provider() -> None:
+    """Debe contar únicamente los clics del proveedor solicitado."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+
+    total = repository.count_total(
+        session=session,
+        provider_id="mercado_libre",
+    )
+
+    assert total == 2
+
+    session.close()
+    engine.dispose()
+
+def test_repository_lists_recent_clicks_for_provider() -> None:
+    """Debe listar clics recientes de un solo proveedor."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+
+    repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+
+    clicks = repository.list_recent(
+        session=session,
+        limit=10,
+        provider_id="mercado_libre",
+    )
+
+    assert len(clicks) == 2
+    assert all(
+        click.provider_id == "mercado_libre"
+        for click in clicks
+    )
+
+    session.close()
+    engine.dispose()
+
+def test_repository_counts_clicks_in_date_range() -> None:
+    """Debe contar clics dentro del rango solicitado."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    first_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+    first_click.created_at = datetime(
+        2026,
+        7,
+        1,
+        tzinfo=timezone.utc,
+    )
+
+    second_click = repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+    second_click.created_at = datetime(
+        2026,
+        7,
+        15,
+        tzinfo=timezone.utc,
+    )
+
+    third_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+    third_click.created_at = datetime(
+        2026,
+        7,
+        25,
+        tzinfo=timezone.utc,
+    )
+
+    session.commit()
+
+    total = repository.count_total(
+        session=session,
+        date_from=datetime(
+            2026,
+            7,
+            10,
+            tzinfo=timezone.utc,
+        ),
+        date_to=datetime(
+            2026,
+            7,
+            31,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    assert total == 2
+
+    session.close()
+    engine.dispose()
+
+def test_repository_lists_recent_clicks_in_date_range() -> None:
+    """Debe listar clics recientes dentro del rango solicitado."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    first_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+    first_click.created_at = datetime(
+        2026,
+        7,
+        1,
+        tzinfo=timezone.utc,
+    )
+
+    second_click = repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+    second_click.created_at = datetime(
+        2026,
+        7,
+        15,
+        tzinfo=timezone.utc,
+    )
+
+    third_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+    third_click.created_at = datetime(
+        2026,
+        7,
+        25,
+        tzinfo=timezone.utc,
+    )
+
+    session.commit()
+
+    clicks = repository.list_recent(
+        session=session,
+        limit=10,
+        date_from=datetime(
+            2026,
+            7,
+            10,
+            tzinfo=timezone.utc,
+        ),
+        date_to=datetime(
+            2026,
+            7,
+            20,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    assert len(clicks) == 1
+    assert clicks[0].id == second_click.id
+    assert clicks[0].provider_id == "amazon"
+
+    session.close()
+    engine.dispose()
+
+def test_repository_counts_by_provider_in_date_range() -> None:
+    """Debe agrupar solamente los clics dentro del rango."""
+
+    session, engine = create_test_session()
+    repository = AffiliateClickRepository()
+
+    first_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-1",
+        destination_url="https://tienda.com/afiliado-1",
+    )
+    first_click.created_at = datetime(
+        2026,
+        7,
+        1,
+        tzinfo=timezone.utc,
+    )
+
+    second_click = repository.create(
+        session=session,
+        provider_id="amazon",
+        product_url="https://ejemplo.com/producto-2",
+        destination_url="https://tienda.com/afiliado-2",
+    )
+    second_click.created_at = datetime(
+        2026,
+        7,
+        15,
+        tzinfo=timezone.utc,
+    )
+
+    third_click = repository.create(
+        session=session,
+        provider_id="mercado_libre",
+        product_url="https://ejemplo.com/producto-3",
+        destination_url="https://tienda.com/afiliado-3",
+    )
+    third_click.created_at = datetime(
+        2026,
+        7,
+        25,
+        tzinfo=timezone.utc,
+    )
+
+    session.commit()
+
+    totals = repository.count_by_provider(
+        session=session,
+        date_from=datetime(
+            2026,
+            7,
+            10,
+            tzinfo=timezone.utc,
+        ),
+        date_to=datetime(
+            2026,
+            7,
+            31,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    assert totals == {
+        "amazon": 1,
+        "mercado_libre": 1,
     }
 
     session.close()
