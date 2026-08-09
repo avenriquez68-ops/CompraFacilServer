@@ -16,6 +16,23 @@ from app.models.mercado_libre_credential import (
 class MercadoLibreCredentialRepository:
     """Guarda y actualiza credenciales de Mercado Libre."""
 
+    def get_latest(
+        self,
+        session: Session,
+    ) -> MercadoLibreCredentialModel | None:
+        """Devuelve las credenciales actualizadas más recientemente."""
+
+        statement = (
+            select(MercadoLibreCredentialModel)
+            .order_by(
+                MercadoLibreCredentialModel.updated_at.desc(),
+                MercadoLibreCredentialModel.id.desc(),
+            )
+            .limit(1)
+        )
+
+        return session.scalar(statement)
+
     def save(
         self,
         session: Session,

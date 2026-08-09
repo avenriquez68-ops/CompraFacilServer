@@ -1,13 +1,21 @@
 """Cliente HTTP para consultar Mercado Libre."""
 
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 
 from app.core.config import Settings, settings
 from app.infrastructure.clients.exceptions import ExternalStoreError
 from app.schemas.product import Product
+from app.infrastructure.clients.mercado_libre_oauth import (
+    MercadoLibreOAuthError,
+)
 
+class AccessTokenProviderProtocol(Protocol):
+    """Contrato para obtener un access token vigente."""
+
+    async def get_access_token(self) -> str:
+        """Devuelve un token listo para utilizar."""
 
 class MercadoLibreClient:
     """Consulta y normaliza productos de Mercado Libre México."""
@@ -16,9 +24,11 @@ class MercadoLibreClient:
         self,
         app_settings: Settings = settings,
         http_client: httpx.AsyncClient | None = None,
+        token_provider: AccessTokenProviderProtocol | None = None,
     ) -> None:
         self._settings = app_settings
         self._http_client = http_client
+        self._token_provider = token_provider
 
     async def search_products(
         self,
@@ -37,7 +47,19 @@ class MercadoLibreClient:
             "User-Agent": "CompraFacilServer/0.3",
         }
 
-        token = self._settings.mercado_libre_access_token.strip()
+        try:
+            if self._token_provider is not None:
+                token = (
+                    await self._token_provider.get_access_token()
+                )
+            else:
+                token = (
+                    self._settings
+                    .mercado_libre_access_token
+                    .strip()
+                )
+        except MercadoLibreOAuthError as error:
+            raise ExternalStoreError(str(error)) from error
 
         if token:
             headers["Authorization"] = f"Bearer {token}"

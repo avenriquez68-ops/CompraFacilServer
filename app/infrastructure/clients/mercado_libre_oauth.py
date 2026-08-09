@@ -83,6 +83,51 @@ class MercadoLibreOAuthClient:
                 "Mercado Libre devolvió una respuesta inválida."
             ) from error
 
+    async def refresh_access_token(
+        self,
+        refresh_token: str,
+    ) -> MercadoLibreToken:
+        """Renueva el access token y el refresh token."""
+
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": self._settings.mercado_libre_client_id,
+            "client_secret": (
+                self._settings.mercado_libre_client_secret
+            ),
+            "refresh_token": refresh_token,
+        }
+
+        try:
+            response = await self._post_token_request(data)
+            response.raise_for_status()
+
+            payload = response.json()
+
+            return MercadoLibreToken(
+                access_token=str(payload["access_token"]),
+                refresh_token=str(payload["refresh_token"]),
+                token_type=str(payload["token_type"]),
+                expires_in=int(payload["expires_in"]),
+                scope=str(payload.get("scope", "")),
+                user_id=int(payload["user_id"]),
+            )
+
+        except httpx.HTTPStatusError as error:
+            raise MercadoLibreOAuthError(
+                "Mercado Libre rechazó la renovación."
+            ) from error
+
+        except httpx.RequestError as error:
+            raise MercadoLibreOAuthError(
+                "No fue posible comunicarse con Mercado Libre."
+            ) from error
+
+        except (KeyError, TypeError, ValueError) as error:
+            raise MercadoLibreOAuthError(
+                "Mercado Libre devolvió una respuesta inválida."
+            ) from error
+
     async def _post_token_request(
         self,
         data: dict[str, Any],
