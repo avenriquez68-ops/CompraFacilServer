@@ -5,10 +5,16 @@ from app.api.dependencies import (
     get_affiliate_click_repository,
     get_affiliate_link_builder_registry,
     get_affiliate_link_service,
+    get_mercado_libre_client,
 )
 from app.services.affiliate_link import AffiliateLinkService
 from app.repositories.affiliate_click import AffiliateClickRepository
-
+from app.infrastructure.clients.mercado_libre import (
+    MercadoLibreClient,
+)
+from app.services.mercado_libre_token import (
+    mercado_libre_token_service,
+)
 
 def test_get_affiliate_link_builder_registry() -> None:
     """Debe construir el registro de generadores comerciales."""
@@ -67,4 +73,18 @@ def test_get_affiliate_click_repository() -> None:
     assert isinstance(
         repository,
         AffiliateClickRepository,
+    )
+
+def test_get_mercado_libre_client_uses_token_service() -> None:
+    """Debe construir el cliente con tokens persistentes."""
+
+    client = get_mercado_libre_client()
+
+    assert isinstance(
+        client,
+        MercadoLibreClient,
+    )
+    assert (
+        client._token_provider
+        is mercado_libre_token_service
     )

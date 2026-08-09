@@ -120,3 +120,55 @@ async def test_exchange_code_handles_rejected_request() -> None:
                 code="invalid-code",
                 code_verifier="test-code-verifier",
             )
+
+@pytest.mark.asyncio
+async def test_refresh_access_token_replaces_refresh_token() -> None:
+    """Debe renovar ambos tokens usando el refresh token vigente."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+
+        body = parse_qs(request.content.decode("utf-8"))
+
+        assert body == {
+            "grant_type": ["refresh_token"],
+            "client_id": ["test-client-id"],
+            "client_secret": ["test-client-secret"],
+            "refresh_token": ["current-refresh-token"],
+        }
+
+        return httpx.Response(
+            status_code=200,
+            json={
+                "access_token": "renewed-access-token",
+                "token_type": "Bearer",
+                "expires_in": 21600,
+                "scope": "offline_access read",
+                "user_id": 123456,
+                "refresh_token": "renewed-refresh-token",
+            },
+        )
+
+    app_settings = Settings(
+        _env_file=None,
+        mercado_libre_client_id="test-client-id",
+        mercado_libre_client_secret="test-client-secret",
+    )
+
+    transport = httpx.MockTransport(handler)
+
+    async with httpx.AsyncClient(
+        transport=transport,
+    ) as http_client:
+        oauth_client = MercadoLibreOAuthClient(
+            app_settings=app_settings,
+            http_client=http_client,
+        )
+
+        token = await oauth_client.refresh_access_token(
+            refresh_token="current-refresh-token",
+        )
+
+    assert token.access_token == "renewed-access-token"
+    assert token.refresh_token == "renewed-refresh-token"
+    assert token.user_id == 123456

@@ -5,7 +5,7 @@ from app.affiliates.registry import (
     build_affiliate_link_builder_registry,
 )
 from app.infrastructure.clients.mercado_libre import (
-    mercado_libre_client,
+    MercadoLibreClient,
 )
 from app.providers.registry import (
     ProviderRegistry,
@@ -13,6 +13,9 @@ from app.providers.registry import (
 )
 from app.services.affiliate_link import AffiliateLinkService
 from app.services.product_search import ProductSearchService
+from app.services.mercado_libre_token import (
+    mercado_libre_token_service,
+)
 
 from app.repositories.affiliate_click import (
     AffiliateClickRepository,
@@ -36,12 +39,18 @@ def get_product_search_service() -> ProductSearchService:
         registry=registry,
     )
 
+def get_mercado_libre_client() -> MercadoLibreClient:
+    """Construye el cliente con acceso a tokens persistentes."""
+
+    return MercadoLibreClient(
+        token_provider=mercado_libre_token_service,
+    )
 
 def get_provider_registry() -> ProviderRegistry:
     """Construye el registro central de proveedores."""
 
     return build_provider_registry(
-        mercado_libre=mercado_libre_client,
+        mercado_libre=get_mercado_libre_client(),
     )
 
 

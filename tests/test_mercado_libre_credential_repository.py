@@ -100,3 +100,35 @@ def test_repository_updates_existing_credentials() -> None:
 
     session.close()
     engine.dispose()
+
+def test_repository_gets_saved_credentials() -> None:
+    """Debe recuperar las credenciales almacenadas."""
+
+    session, engine = create_test_session()
+    repository = MercadoLibreCredentialRepository()
+
+    token = MercadoLibreToken(
+        access_token="saved-access-token",
+        refresh_token="saved-refresh-token",
+        token_type="Bearer",
+        expires_in=21600,
+        scope="offline_access read",
+        user_id=123456,
+    )
+
+    repository.save(
+        session=session,
+        token=token,
+    )
+
+    credential = repository.get_latest(
+        session=session,
+    )
+
+    assert credential is not None
+    assert credential.user_id == 123456
+    assert credential.access_token == "saved-access-token"
+    assert credential.refresh_token == "saved-refresh-token"
+
+    session.close()
+    engine.dispose()
