@@ -19,6 +19,14 @@ from app.repositories.affiliate_click import (
     affiliate_click_repository,
 )
 
+from app.infrastructure.clients.mercado_libre_oauth import (
+    MercadoLibreOAuthClient,
+)
+from app.repositories.mercado_libre_credential import (
+    MercadoLibreCredentialRepository,
+    mercado_libre_credential_repository,
+)
+
 def get_product_search_service() -> ProductSearchService:
     """Construye el servicio principal de búsqueda de productos."""
 
@@ -57,3 +65,16 @@ def get_affiliate_click_repository() -> AffiliateClickRepository:
     """Proporciona el repositorio de clics de afiliados."""
 
     return affiliate_click_repository
+
+def get_mercado_libre_oauth_client(
+) -> MercadoLibreOAuthClient:
+    """Construye el cliente OAuth de Mercado Libre."""
+
+    return MercadoLibreOAuthClient()
+
+
+def get_mercado_libre_credential_repository(
+) -> MercadoLibreCredentialRepository:
+    """Proporciona el repositorio de credenciales."""
+
+    return mercado_libre_credential_repository
