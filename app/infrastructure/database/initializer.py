@@ -3,7 +3,11 @@
 from sqlalchemy.engine import Engine
 
 from app.infrastructure.database.connection import Base, engine
-from app.models import affiliate_click, search_history
+from app.models import (
+    affiliate_click,
+    mercado_libre_credential,
+    search_history,
+)
 
 
 def initialize_database(
@@ -12,6 +16,7 @@ def initialize_database(
     """Crea las tablas que todavía no existen."""
 
     _ = affiliate_click
+    _ = mercado_libre_credential
     _ = search_history
 
     Base.metadata.create_all(

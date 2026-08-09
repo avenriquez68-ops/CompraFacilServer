@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     mercado_libre_access_token: str = ""
     mercado_libre_timeout_seconds: float = 10.0
     mercado_libre_affiliate_id: str = ""
+    mercado_libre_client_id: str = ""
+    mercado_libre_client_secret: str = ""
+    mercado_libre_authorization_url: str = (
+        "https://auth.mercadolibre.com.mx/authorization"
+    )
+    mercado_libre_token_url: str = (
+        "https://api.mercadolibre.com/oauth/token"
+    )
+    mercado_libre_redirect_uri: str = (
+        "https://api.dameprecio.shop"
+        "/api/v1/auth/mercado-libre/callback"
+    )
 
     amazon_associate_tag: str = ""
 
