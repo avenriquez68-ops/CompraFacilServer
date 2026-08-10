@@ -30,7 +30,7 @@ export async function searchProducts(
   const parameters = new URLSearchParams({
     q: query,
     limit: String(limit),
-    providers: 'demo_store',
+    providers: 'mercado_libre',
   })
 
   const response = await fetch(
