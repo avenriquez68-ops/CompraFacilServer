@@ -12,17 +12,17 @@ import type { SearchResponse } from '../types/product'
 const successfulResponse: SearchResponse = {
   query: 'laptop',
   total: 1,
-  source: 'demo_store',
+  source: 'multi_provider',
   fallback_used: false,
   warning: null,
   products: [
     {
-      id: 'demo-1',
-      nombre: 'Laptop de demostración',
+      id: 'MLM123',
+      nombre: 'Laptop de Mercado Libre',
       precio: 12999,
       precio_original: null,
       moneda: 'MXN',
-      tienda: 'Demo Store',
+      tienda: 'Mercado Libre',
       url: 'https://example.com/producto',
       imagen_url: null,
       condicion: 'nuevo',
@@ -50,7 +50,7 @@ describe('searchProducts', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/search?q=laptop&limit=5&providers=demo_store',
+      '/api/v1/search?q=laptop&limit=5&providers=mercado_libre',
     )
     expect(result).toEqual(successfulResponse)
   })
