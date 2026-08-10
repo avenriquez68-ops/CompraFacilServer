@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     app_version: str = "1.3.0"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
+    cors_allowed_origins: list[str] = [
+        "http://localhost:5173",
+        "https://dameprecio.shop",
+        "https://www.dameprecio.shop",
+    ]
     admin_api_key: str = ""
 
     mercado_libre_base_url: str = "https://api.mercadolibre.com"

@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from app.infrastructure.database.initializer import (
     initialize_database,
 )
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -27,6 +28,14 @@ app = FastAPI(
     description=(
         "API para buscar y comparar productos de diferentes tiendas en línea."
     ),
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 app.include_router(
