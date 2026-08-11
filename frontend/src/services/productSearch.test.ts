@@ -36,6 +36,7 @@ const successfulResponse: SearchResponse = {
 describe('searchProducts', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('consulta el endpoint con los parámetros esperados', async () => {
@@ -53,6 +54,31 @@ describe('searchProducts', () => {
       '/api/v1/search?q=laptop&limit=5&providers=mercado_libre',
     )
     expect(result).toEqual(successfulResponse)
+  })
+
+  it('usa la API pública configurada', async () => {
+    vi.stubEnv(
+      'VITE_API_BASE_URL',
+      'https://api.dameprecio.shop',
+    )
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(successfulResponse),
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await searchProducts('celular', 10)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      (
+        'https://api.dameprecio.shop'
+        + '/api/v1/search'
+        + '?q=celular&limit=10'
+        + '&providers=mercado_libre'
+      ),
+    )
   })
 
   it('devuelve el mensaje enviado por el servidor', async () => {

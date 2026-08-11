@@ -8,6 +8,12 @@ interface ErrorResponse {
   detail?: string | ValidationError[]
 }
 
+function getApiBaseUrl(): string {
+  return (
+    import.meta.env.VITE_API_BASE_URL ?? ''
+  ).replace(/\/+$/, '')
+}
+
 function getErrorMessage(body: ErrorResponse): string {
   if (typeof body.detail === 'string') {
     return body.detail
@@ -34,7 +40,10 @@ export async function searchProducts(
   })
 
   const response = await fetch(
-    `/api/v1/search?${parameters.toString()}`,
+    (
+      `${getApiBaseUrl()}`
+      + `/api/v1/search?${parameters.toString()}`
+    ),
   )
 
   if (!response.ok) {

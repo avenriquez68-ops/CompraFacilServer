@@ -27,3 +27,21 @@ def test_app_initializes_database_on_startup(
 
     assert response.status_code == 200
     assert initialization_calls == [True]
+
+def test_app_allows_dameprecio_frontend_origin() -> None:
+    """Debe permitir solicitudes desde el frontend público."""
+
+    with TestClient(main_module.app) as client:
+        response = client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://dameprecio.shop",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert response.status_code == 200
+    assert (
+        response.headers["access-control-allow-origin"]
+        == "https://dameprecio.shop"
+    )
