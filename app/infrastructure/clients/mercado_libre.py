@@ -96,10 +96,14 @@ class MercadoLibreClient:
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
 
-            if status_code in {401, 403}:
+            if status_code == 401:
                 message = (
-                    "Mercado Libre rechazó la consulta. "
-                    "Puede ser necesario configurar un token de acceso."
+                    "Mercado Libre rechazó el token de acceso."
+                )
+            elif status_code == 403:
+                message = (
+                    "Mercado Libre rechazó la consulta por "
+                    "permisos insuficientes."
                 )
             else:
                 message = (
